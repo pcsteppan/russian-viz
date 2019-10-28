@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Russia Bigrams</title>
+    <!-- <script src="https://d3js.org/d3.v4.js"></script> -->
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+</head>
+<body>
+    <nav>
+        <ol id ="bigrams">
+        </ol>
+    </nav>
+    <div id="svg-container"></div>
+</body>
+<style>
+    *{
+        padding: 0;
+        margin: 0;
+    }
+    nav{
+        overflow-y: scroll;
+        width: 200px;
+        max-height: 100vh;
+        padding-left:3em;
+        position: absolute;
+        top: 0;
+        left: 0;
+        color: red;
+        font-weight: bold;
+        font-family: sans-serif;
+        line-height: 1.5em;
+    }
+    div#svg-container{
+        float: right;
+        padding-right: 4rem;
+        display: flex;
+        height: 100vh;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+<script>
+    let nav = d3.select("#bigrams");
+    
+    d3.dsv(",", "results/data.csv", function(d) {
+    return {
+        month: new Date(+d.month.split("/")[1], +d.month.split("/")[0]),
+        bigram: d.bigram,
+        frequency: d.frequency
+    };
+    }).then(function(data) {
+        let bigram_set = new Set()
+        data.forEach(e => {
+            bigram_set.add(e.bigram)
+        });
+        bigram_set.forEach(i => {
+            nav.append('li').text(i)
+            .on("mouseover", function(){
+                d3.select(this)
+                .style("background", "linear-gradient(red 0%, white 30%)");
+                active_bigram = this.innerText;
+                render();
+            })
+            .on("mouseout", function(){
+                d3.select(this)
+                .style("background", "white")
+            })
+            .on("click", function(){
+                active_bigram = this.innerText;
+                render();
+            })
+        })
+        let render = function(){
+            let filtered_data = data.filter(e => e.bigram == active_bigram)
+            let max_frequency = (filtered_data.map(x => Number(x.frequency)))
+            max_frequency.sort()
+            console.log(max_frequency)
+            max_frequency = Math.max(...max_frequency)
+            // max_frequency = max_frequency[max_frequency.length-1]
+            
+            console.log(max_frequency)
+
+            console.log(`max_frequency of ${active_bigram} is ${max_frequency}`)
+            var w = 600;
+            var h = 600;
+            d3.select("#svg-container>svg").remove()
+
+            var svg = d3.select('#svg-container')
+                .append('svg')
+                .attr('width', w)
+                .attr('height', h);
+
+            let xScale = d3.scaleTime()
+            .domain([new Date(2012, 7), new Date(2018, 5)])
+            .range([0, w]);
+
+            let yScale = d3.scaleLinear()
+            .domain([0, max_frequency])
+            .range([h, 0]);
+
+            let xAxis = d3.axisBottom(xScale)
+            let yAxis = d3.axisLeft(yScale)
+            
+            svg.append("g")
+            .attr("transform", "translate(0,30)")
+            .call(xAxis)
+            .append("g")
+            .attr('transform', 'translate(90,0)')
+            .call(yAxis);
+
+            svg.selectAll('rect.colorBar').remove()
+            svg.selectAll('rect.colorBar')
+                .data(filtered_data)
+                .enter()
+                .append('rect')
+                .attr('width', function(d,i){
+                    return (w/70.0);
+                })
+                .attr('height', function(d,i){
+                    return h - yScale(d.frequency)
+                })
+                .attr('x', function(d,i){
+                    let a = d.month;
+                    return xScale(a)
+                })
+                .attr('y', function(d,i){
+                    return yScale(d.frequency)
+                })
+                .attr('fill', 'black')
+        }
+    });
+
+    // let nav = d3.select("#bigrams")
+    // nav.selectAll('li')
+    // .data(data)
+    // .enter()
+    // .append('li')
+</script>
+</html>
